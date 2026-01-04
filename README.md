@@ -1,137 +1,125 @@
-# Customer Churn Prediction using Machine Learning
+# Telecom Customer Churn Prediction
 
-## 📌 Project Overview
-Customer churn prediction is a critical business problem for subscription-based companies, where retaining existing customers is often more cost-effective than acquiring new ones. This project aims to predict customer churn using historical customer data and to identify key drivers influencing churn behavior.
+## Overview
+Customer churn is a critical business problem for subscription-based companies, where retaining existing customers is often more cost-effective than acquiring new ones. This project focuses on predicting customer churn in the telecom domain using supervised machine learning, with an emphasis on recall-focused evaluation, interpretability, and business realism.
 
-The project follows a systematic, industry-aligned machine learning workflow, progressing from interpretable baseline models to advanced ensemble methods, with a strong emphasis on evaluation metrics aligned to business objectives.
-
----
-
-## 🎯 Problem Statement
-The objective is to build a classification model that can accurately identify customers who are likely to churn.  
-Given the business context, **recall is prioritized** to minimize missed churners, while maintaining reasonable precision to control unnecessary retention efforts.
+The project follows an end-to-end ML workflow, progressing from exploratory data analysis and hypothesis-driven feature exploration to model comparison, threshold optimization, and interpretability analysis.
 
 ---
 
-## 📊 Dataset
-- **Source**: IBM Telco Customer Churn dataset (Kaggle / OpenML)
-- **Size**: ~7,000 customers
-- **Features**:
-  - Demographics (e.g., gender, senior citizen, dependents)
-  - Services subscribed (internet, security, streaming, support)
-  - Contract and billing information
-  - Tenure and pricing details
-- **Target Variable**: `Churn` (Yes / No)
+## Problem Statement
+The objective of this project is to predict whether a customer will churn (leave the service) based on demographic, contractual, pricing, and service usage information.
+
+- **Target Variable:** `Churn Label`
+- **Problem Type:** Binary classification
+- **Business Goal:** Maximize churn detection (recall) to enable proactive retention strategies
 
 ---
 
-## 🔍 Exploratory Data Analysis (EDA)
-EDA was conducted in a hypothesis-driven manner, focusing on:
-- Churn distribution and class imbalance
-- Relationship between churn and tenure, contract type, pricing, and services
-- Aggregated service usage patterns
-- Geographic features (explored and discarded due to lack of churn signal)
+## Dataset
+The project uses the **IBM Telco Customer Churn dataset**, sourced via Kaggle.
 
-Key insights included:
-- Short tenure and month-to-month contracts strongly increase churn risk
-- Higher monthly charges are associated with higher churn
-- Customers with more engaged service usage churn less
-- Geographic clustering showed no meaningful correlation with churn
+- Source:  
+  https://www.kaggle.com/datasets/yeanzc/telco-customer-churn-ibm-dataset
+- Original IBM documentation:  
+  https://community.ibm.com/community/user/businessanalytics/blogs/steven-macko/2019/07/11/telco-customer-churn-1113
+
+**Note:**  
+The raw dataset is not included in this repository due to licensing considerations. Instructions for downloading the dataset are provided within the notebook.
 
 ---
 
-## 🧹 Data Preprocessing
-Key preprocessing steps:
-- Dropped identifier and non-informative geographic features
-- Handled missing values in numerical fields (e.g., `Total Charges`)
-- One-hot encoded categorical variables
-- Separate preprocessing pipelines were used for:
-  - **Linear models** (scaling + transformations)
-  - **Tree-based models** (no scaling)
-- A preprocessing correction was applied to ensure numerical features were properly passed to tree-based models
+## Project Highlights
 
-This correction significantly improved Random Forest and XGBoost performance and is documented transparently in the analysis.
+- End-to-end churn prediction project with realistic business framing.
+- Hypothesis-driven EDA guiding feature selection and engineering decisions.
+- Separate preprocessing pipelines for linear and tree-based models.
+- Threshold optimization to align model predictions with recall-focused churn objectives.
+- Comparative evaluation of Logistic Regression, Random Forest, and XGBoost.
+- Model interpretability using SHAP for both global and local explanations.
 
 ---
 
-## 🤖 Models Evaluated
-The following models were trained and evaluated:
+## Methodology
 
-- Logistic Regression (baseline)
-- Logistic Regression (threshold optimized)
-- Random Forest
-- Random Forest (threshold optimized)
-- XGBoost (final model)
+### 1. Exploratory Data Analysis
+- Hypothesis-based exploration of demographics, tenure, contracts, pricing, and services.
+- Identification and removal of redundant, high-cardinality, and leakage-prone features.
+- Validation of business assumptions using churn rates and distributional analysis.
 
-Threshold tuning was applied where appropriate to optimize recall.
+### 2. Feature Engineering
+- Aggregation of individual service indicators into a service engagement feature.
+- Careful handling of missing values and skewed numerical features.
+- Explicit exclusion of post-outcome variables (e.g., churn reason, churn score).
 
----
+### 3. Modeling
+Models evaluated include:
+- Logistic Regression (baseline and threshold-optimized)
+- Random Forest (default and threshold-optimized)
+- XGBoost (final selected model)
 
-## 📈 Model Performance (Validation)
+Separate preprocessing pipelines were designed for:
+- Linear models (scaling and log transformations)
+- Tree-based models (no scaling or log transformations)
 
-| Model | Accuracy | Precision | Recall | F1 |
-|------|----------|-----------|--------|----|
-| Logistic Regression | 0.818 | 0.686 | 0.576 | 0.626 |
-| Logistic Reg (Opt. Threshold) | 0.798 | 0.596 | 0.746 | 0.663 |
-| Random Forest | 0.789 | 0.570 | 0.836 | 0.678 |
-| RF (Opt. Threshold) | 0.804 | 0.597 | 0.803 | 0.685 |
-| **XGBoost** | **0.844** | **0.641** | **0.934** | **0.760** |
-
----
-
-## 🧪 Final Test Set Performance
-
-| Model | Accuracy | Precision | Recall | F1 |
-|------|----------|-----------|--------|----|
-| **XGBoost (Test)** | 0.754 | 0.526 | 0.757 | 0.621 |
-
-While a generalization drop was observed (expected due to recall-focused tuning), the model maintained strong recall on unseen data, confirming robust performance.
+### 4. Evaluation Strategy
+- Primary focus on **Recall** and **F1-score** due to class imbalance and business cost of missed churners.
+- Threshold optimization performed using precision–recall trade-offs.
+- Final evaluation conducted on a held-out test set.
 
 ---
 
-## ✅ Model Selection Rationale
-- Logistic Regression provided a strong, interpretable baseline but plateaued due to linear assumptions.
-- Random Forest improved performance once numerical features were correctly included but offered incremental gains.
-- XGBoost consistently achieved the highest recall and F1 score by capturing non-linear interactions and focusing on hard-to-classify churn cases.
-- Given the business priority of maximizing churn detection, **XGBoost was selected as the final model**.
+## Model Selection Summary
+Logistic Regression provided a strong and interpretable baseline, with threshold optimization significantly improving recall. Random Forest models offered limited incremental benefit over the tuned linear baseline. XGBoost demonstrated the best overall performance, achieving the highest recall and F1-score while maintaining acceptable precision, making it the most suitable model for the churn detection objective.
 
 ---
 
-## ⚠️ Limitations
-- Static snapshot data; no temporal behavior modeling
-- Threshold optimized on validation data
-- Single-provider, single-region dataset
-- No explicit cost-sensitive optimization
-- Model probabilities not calibrated for deployment
+## Interpretability
+- Gain-based feature importance for model-level insights.
+- SHAP summary and waterfall plots for global and local explanations.
+- Interpretability analysis confirms that churn is driven primarily by contract structure, tenure, pricing pressure, and service engagement rather than demographics.
 
 ---
 
-## 🚀 Future Improvements
-- Incorporate time-series and behavioral features
-- Cross-validated threshold optimization
-- Cost-aware churn modeling
-- Probability calibration for production use
-- Deployment and monitoring pipeline
+## Key Business Insights
+
+- Contract type is the strongest churn driver; month-to-month customers churn significantly more.
+- New customers are more vulnerable to churn, highlighting the importance of early engagement.
+- Higher monthly charges increase churn risk even after accounting for tenure.
+- Service quality and protection features (e.g., tech support, online security) reduce churn probability.
+- Demographic attributes contribute minimal predictive value.
 
 ---
 
-## 🧠 Key Takeaways
-- Proper preprocessing is critical for fair model comparison
-- Threshold tuning significantly impacts churn recall
-- Boosting models outperform bagging and linear models for structured churn data
-- Recall-focused evaluation aligns better with business objectives
+## Limitations
+- The analysis is based on a static snapshot of customer data without temporal dynamics.
+- Threshold optimization may not generalize optimally under distributional shifts.
+- Results are specific to a single telecom dataset and geographic context.
 
 ---
 
-## 📎 Tools & Libraries
-- Python, pandas, NumPy
-- scikit-learn
+## Future Scope
+- Incorporate time-based features and longitudinal modeling for churn dynamics.
+- Explore cost-sensitive learning and custom loss functions aligned with business impact.
+- Investigate controlled use of auxiliary signals (e.g., churn reasons, CLTV) via weak supervision or multi-task learning while avoiding data leakage.
+
+---
+
+## Tech Stack
+- Python
+- Pandas, NumPy
+- Scikit-learn
 - XGBoost
+- SHAP
 - Matplotlib, Seaborn
+- Jupyter Notebook
 
 ---
 
-## 👤 Author
-This project was built as part of a machine learning portfolio to demonstrate end-to-end problem solving, model selection, and business-aligned evaluation.
+## Reproducibility
+All experiments use fixed random seeds where applicable to ensure reproducibility. The notebook is designed to run end-to-end once the dataset is downloaded.
 
+---
 
+## Author
+This project was developed as part of a professional machine learning portfolio, with an emphasis on real-world problem framing, evaluation rigor, and interpretability.
