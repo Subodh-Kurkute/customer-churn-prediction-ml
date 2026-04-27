@@ -114,7 +114,7 @@ RF (opt. threshold) is the more stable alternative where generalization is prior
 ### Evaluation Plots
 
 **Precision-Recall Curve — XGBoost (AP = 0.84)**  
-![PR Curve](assets/pr_curve_xgb.png)
+![PR Curve](images/pr_curve_xgb.png)
 
 ---
 
@@ -123,7 +123,7 @@ RF (opt. threshold) is the more stable alternative where generalization is prior
 SHAP values computed on XGBoost to validate alignment between model behavior and business intuition.
 
 **SHAP Beeswarm — Feature Impact on Churn Prediction**  
-![SHAP Beeswarm](assets/shap_beeswarm_xgb.png)
+![SHAP Beeswarm](images/shap_beeswarm_xgb.png)
 
 | Feature | Direction | Business Interpretation |
 |---|---|---|
