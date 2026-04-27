@@ -1,125 +1,193 @@
-# Telecom Customer Churn Prediction
+# Customer Churn Prediction — Telecom (IBM Dataset)
 
-## Overview
-Customer churn is a critical business problem for subscription-based companies, where retaining existing customers is often more cost-effective than acquiring new ones. This project focuses on predicting customer churn in the telecom domain using supervised machine learning, with an emphasis on recall-focused evaluation, interpretability, and business realism.
+Supervised binary classification project predicting customer churn using hypothesis-driven EDA, separate preprocessing pipelines, threshold optimization, and SHAP explainability.
 
-The project follows an end-to-end ML workflow, progressing from exploratory data analysis and hypothesis-driven feature exploration to model comparison, threshold optimization, and interpretability analysis.
-
----
-
-## Problem Statement
-The objective of this project is to predict whether a customer will churn (leave the service) based on demographic, contractual, pricing, and service usage information.
-
-- **Target Variable:** `Churn Label`
-- **Problem Type:** Binary classification
-- **Business Goal:** Maximize churn detection (recall) to enable proactive retention strategies
-
----
-
-## Dataset
-The project uses the **IBM Telco Customer Churn dataset**, sourced via Kaggle.
-
-- Source:  
-  https://www.kaggle.com/datasets/yeanzc/telco-customer-churn-ibm-dataset
-- Original IBM documentation:  
-  https://community.ibm.com/community/user/businessanalytics/blogs/steven-macko/2019/07/11/telco-customer-churn-1113
-
-**Note:**  
-The raw dataset is not included in this repository due to licensing considerations. Instructions for downloading the dataset are provided within the notebook.
+**Dataset:** [IBM Telco Customer Churn — Kaggle](https://www.kaggle.com/datasets/yeanzc/telco-customer-churn-ibm-dataset) — 7,043 customers, 33 features  
+**Class distribution:** ~26% churned / ~74% active  
+**Class imbalance handling:** Stratified train/test split to preserve distribution; threshold tuning to optimize F1 rather than accuracy.  
+**Success criteria:** Maximize recall (catch true churners) while maintaining precision sufficient for actionable retention campaigns.
 
 ---
 
 ## Project Highlights
-
-- End-to-end churn prediction project with realistic business framing.
-- Hypothesis-driven EDA guiding feature selection and engineering decisions.
-- Separate preprocessing pipelines for linear and tree-based models.
-- Threshold optimization to align model predictions with recall-focused churn objectives.
-- Comparative evaluation of Logistic Regression, Random Forest, and XGBoost.
-- Model interpretability using SHAP for both global and local explanations.
-
----
-
-## Methodology
-
-### 1. Exploratory Data Analysis
-- Hypothesis-based exploration of demographics, tenure, contracts, pricing, and services.
-- Identification and removal of redundant, high-cardinality, and leakage-prone features.
-- Validation of business assumptions using churn rates and distributional analysis.
-
-### 2. Feature Engineering
-- Aggregation of individual service indicators into a service engagement feature.
-- Careful handling of missing values and skewed numerical features.
-- Explicit exclusion of post-outcome variables (e.g., churn reason, churn score).
-
-### 3. Modeling
-Models evaluated include:
-- Logistic Regression (baseline and threshold-optimized)
-- Random Forest (default and threshold-optimized)
-- XGBoost (final selected model)
-
-Separate preprocessing pipelines were designed for:
-- Linear models (scaling and log transformations)
-- Tree-based models (no scaling or log transformations)
-
-### 4. Evaluation Strategy
-- Primary focus on **Recall** and **F1-score** due to class imbalance and business cost of missed churners.
-- Threshold optimization performed using precision–recall trade-offs.
-- Final evaluation conducted on a held-out test set.
+- Hypothesis-driven EDA — features explored by business context group with explicit hypotheses, not blindly
+- Data leakage prevention — post-outcome variables explicitly identified and excluded
+- Separate preprocessing pipelines for linear and tree-based models
+- Threshold optimization via F1-score maximization
+- SHAP explainability confirming alignment between model behavior and business intuition
+- Honest evaluation — no result inflation via synthetic sample injection; generalization gap openly reported
 
 ---
 
-## Model Selection Summary
-Logistic Regression provided a strong and interpretable baseline, with threshold optimization significantly improving recall. Random Forest models offered limited incremental benefit over the tuned linear baseline. XGBoost demonstrated the best overall performance, achieving the highest recall and F1-score while maintaining acceptable precision, making it the most suitable model for the churn detection objective.
+## 1. Dataset
+
+**Source:** [IBM Telco Customer Churn — Kaggle](https://www.kaggle.com/datasets/yeanzc/telco-customer-churn-ibm-dataset)  
+**Size:** 7,043 customers, 33 features  
+**Target:** `Churn Label` — binary (Yes/No)
+
+| Category | Features |
+|---|---|
+| Demographics | Gender, Senior Citizen, Partner, Dependents |
+| Services | Internet, Security, Backup, Streaming, Support |
+| Contract & Billing | Contract type, Payment method, Monthly/Total charges |
+| Tenure | Tenure Months |
+
+**Dropped features:**
+
+| Feature(s) | Reason |
+|---|---|
+| `Churn Value`, `Churn Reason`, `Churn Score`, `CLTV` | Post-outcome / model-derived — data leakage |
+| `CustomerID`, `Count` | Identifier / zero variance |
+| `Country`, `State` | No variability (all records: US, California) |
+| `City`, `Zip Code`, `Lat`, `Long` | High cardinality, no churn signal beyond density |
+| `Gender` | No meaningful association with churn |
 
 ---
 
-## Interpretability
-- Gain-based feature importance for model-level insights.
-- SHAP summary and waterfall plots for global and local explanations.
-- Interpretability analysis confirms that churn is driven primarily by contract structure, tenure, pricing pressure, and service engagement rather than demographics.
+## 2. Methodology
+
+### 2.1 Data Split
+Stratified train/test split — preserves ~26% churn rate across both sets.  
+No group-based splitting needed: all CustomerIDs are unique.
+
+### 2.2 Hypothesis-Driven EDA
+
+Features explored by business context group. Each group had an explicit hypothesis before inclusion/exclusion decisions.
+
+| Feature Group | Hypothesis | Outcome |
+|---|---|---|
+| Demographics | Stable households churn less | Partially supported — dependents ✓, gender ✗ |
+| Tenure | Longer tenure → lower churn | Supported |
+| Services | More services → lower churn | Non-linear — partial engagement shows highest churn |
+| Contract & Billing | Month-to-month + high charges → higher churn | Strongly supported |
 
 ---
 
-## Key Business Insights
+## 3. Feature Engineering & Preprocessing
 
-- Contract type is the strongest churn driver; month-to-month customers churn significantly more.
-- New customers are more vulnerable to churn, highlighting the importance of early engagement.
-- Higher monthly charges increase churn risk even after accounting for tenure.
-- Service quality and protection features (e.g., tech support, online security) reduce churn probability.
-- Demographic attributes contribute minimal predictive value.
+Two separate pipelines — linear and tree-based models have different preprocessing requirements.
+
+### Pipeline A — Linear Models (Logistic Regression)
+- Drop irrelevant/leakage features
+- Impute missing `Total Charges` (blank strings → NaN → median)
+- Engineer `total_services` (sum of actively subscribed services)
+- Log-transform skewed numerical features
+- One-hot encode categoricals
+- StandardScaler on numerical + engineered features
+
+### Pipeline B — Tree-Based Models (Random Forest, XGBoost)
+- Same drop + impute + engineer steps
+- One-hot encode categoricals
+- **No scaling** — tree-based models are scale-invariant
+
+**Why separate pipelines?** Applying scaling to tree-based models adds complexity with no benefit. Keeping pipelines separate avoids silent preprocessing errors and makes model-specific assumptions explicit.
 
 ---
 
-## Limitations
-- The analysis is based on a static snapshot of customer data without temporal dynamics.
-- Threshold optimization may not generalize optimally under distributional shifts.
-- Results are specific to a single telecom dataset and geographic context.
+## 4. Modeling
+
+Progressive complexity: Logistic Regression (baseline) → Random Forest → XGBoost.  
+Threshold tuning applied to LR and RF using F1-score maximization.  
+RF constrained (`max_depth`, `min_samples_leaf`, `class_weight`) to reduce majority-class bias.
+
+### Results
+
+| Model | Accuracy | Precision | Recall | F1 |
+|---|---|---|---|---|
+| Logistic Regression | 0.818 | 0.686 | 0.576 | 0.626 |
+| LR (Opt. Threshold) | 0.798 | 0.596 | 0.746 | 0.663 |
+| Random Forest | 0.789 | 0.570 | 0.836 | 0.678 |
+| RF (Opt. Threshold) | 0.804 | 0.597 | 0.803 | 0.685 |
+| XGBoost (validation) | 0.844 | 0.641 | 0.934 | 0.760 |
+| **XGBoost (test)** | **0.754** | **0.526** | **0.757** | **0.621** |
+
+### Key Observations
+- Threshold tuning consistently improved F1 by trading precision for recall
+- LR performance after tuning suggests churn drivers are largely monotonic
+- RF (opt. threshold) is the most stable model: competitive F1 with smaller train/test gap
+- XGBoost achieves highest validation recall (0.93) but shows generalization gap on test (F1: 0.760 → 0.621) — threshold tuning and regularization are clear next steps
+
+### Model Selection
+XGBoost selected for strongest recall on unseen churners.  
+RF (opt. threshold) is the more stable alternative where generalization is prioritized.
+
+### Evaluation Plots
+
+**Precision-Recall Curve — XGBoost (AP = 0.84)**  
+![PR Curve](assets/pr_curve_xgb.png)
 
 ---
 
-## Future Scope
-- Incorporate time-based features and longitudinal modeling for churn dynamics.
-- Explore cost-sensitive learning and custom loss functions aligned with business impact.
-- Investigate controlled use of auxiliary signals (e.g., churn reasons, CLTV) via weak supervision or multi-task learning while avoiding data leakage.
+## 5. Model Explainability (SHAP)
+
+SHAP values computed on XGBoost to validate alignment between model behavior and business intuition.
+
+**SHAP Beeswarm — Feature Impact on Churn Prediction**  
+![SHAP Beeswarm](assets/shap_beeswarm_xgb.png)
+
+| Feature | Direction | Business Interpretation |
+|---|---|---|
+| Contract: Month-to-month | ↑ churn | Lowest switching barrier |
+| Tenure Months | ↓ churn (high tenure) | Early customers most at risk |
+| No Dependents | ↑ churn | Lower household switching cost |
+| Monthly Charges | ↑ churn (high charges) | Price sensitivity |
+| No Online Security | ↑ churn | Lower service stickiness |
+| Fiber Optic Internet | ↑ churn | Possibly price tier or service dissatisfaction |
+| Gender | ~0 | No meaningful impact — behavior-driven model |
+
+**Note:** `Total Charges` SHAP direction is influenced by its strong correlation with tenure — interpret jointly, not independently.
+
+**Key finding:** Churn is driven by contractual and behavioral factors, not demographics. SHAP confirms EDA hypotheses.
+
+---
+
+## 6. Generalization & Limitations
+
+### Generalization
+XGBoost validation F1: 0.760 → test F1: 0.621. Recall drops from 0.934 → 0.757.  
+**Honest assessment:** The gap indicates overfitting. RF (opt. threshold) generalizes more stably.  
+XGBoost threshold was not tuned (default 0.50 on test) — a direct next step likely to improve test F1.
+
+### Limitations
+- Single train/test split — variance across partitions not assessed
+- XGBoost threshold not tuned — test performance is at default 0.50
+- No hyperparameter tuning on XGBoost — regularization likely to close generalization gap
+- Static features only — no temporal churn dynamics modeled
+- Dataset is geographically limited (California only)
+
+### Future Scope
+- XGBoost threshold tuning and regularization (`max_depth`, `min_child_weight`, `subsample`)
+- Cross-validation for reliable generalization estimates
+- Cost-sensitive learning aligned with business churn costs
+- Time-aware validation and longitudinal features
+- Controlled use of auxiliary signals (`CLTV`, `Churn Score`) as weak supervision targets
+
+---
+
+## 7. Key Business Insights
+
+- **Contract type is the strongest churn driver** — month-to-month customers churn significantly more
+- **New customers are most at risk** — early engagement is critical for retention
+- **Higher monthly charges increase churn risk** — even after controlling for tenure
+- **Service subscriptions reduce churn** — tech support and online security increase stickiness
+- **Demographics have minimal impact** — behavior and contract structure drive churn, not who the customer is
 
 ---
 
 ## Tech Stack
-- Python
-- Pandas, NumPy
-- Scikit-learn
-- XGBoost
-- SHAP
-- Matplotlib, Seaborn
-- Jupyter Notebook
+
+| Category | Tools |
+|---|---|
+| Language | Python |
+| Data | Pandas, NumPy |
+| ML | Scikit-learn, XGBoost |
+| Explainability | SHAP |
+| Visualization | Matplotlib, Seaborn |
+| Environment | Jupyter Notebook |
 
 ---
 
 ## Reproducibility
-All experiments use fixed random seeds where applicable to ensure reproducibility. The notebook is designed to run end-to-end once the dataset is downloaded.
 
----
-
-## Author
-This project was developed as part of a professional machine learning portfolio, with an emphasis on real-world problem framing, evaluation rigor, and interpretability.
+All experiments use fixed random seeds. Notebook runs end-to-end once the dataset is downloaded from Kaggle.  
+Dataset path: update `DATA_PATH` in the first cell.
